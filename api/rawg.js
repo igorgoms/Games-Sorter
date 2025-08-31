@@ -51,36 +51,45 @@ async function getFilters() {
 
 // Função para buscar um jogo aleatório com base nos filtros
 async function getSortedGame(apiKey, apiHost, genres) {
-    // 1. Descobre quantos jogos existem com este filtro para encontrar uma página aleatória
-    const initialSearch = await rawgFetch(apiKey, apiHost, '/games', { genres, page_size: 1 });
-    const totalGames = initialSearch.count;
+    const MAX_ATTEMPTS = 5; // MUDANÇA: Define o número máximo de tentativas
 
-    if (totalGames === 0) {
-        return null;
-    }
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        console.log(`Tentativa ${attempt + 1} de ${MAX_ATTEMPTS} para encontrar um jogo.`);
+        
+        const initialSearch = await rawgFetch(apiKey, apiHost, '/games', { genres, page_size: 1 });
+        const totalGames = initialSearch.count;
 
-    // A API permite no máximo 40 resultados por página.
-    // E no máximo a página 250 (10000 resultados).
-    const maxPage = Math.min(250, Math.ceil(totalGames / 40)); 
-    const randomPage = Math.floor(Math.random() * maxPage) + 1;
+        if (totalGames === 0) {
+            console.log("Nenhum jogo encontrado com os filtros fornecidos.");
+            return null; // Retorna nulo se não houver jogos
+        }
 
-    // 2. Busca uma página de jogos aleatória
-    const gameListData = await rawgFetch(apiKey, apiHost, '/games', {
-        genres,
-        page: randomPage,
-        page_size: 40 // Busca uma página cheia para ter mais opções
-    });
+        const maxPage = Math.min(250, Math.ceil(totalGames / 40));
+        const randomPage = Math.floor(Math.random() * maxPage) + 1;
 
-    if (!gameListData.results || gameListData.results.length === 0) {
-        return null;
+        const gameListData = await rawgFetch(apiKey, apiHost, '/games', {
+            genres,
+            page: randomPage,
+            page_size: 40
+        });
+
+        if (gameListData.results && gameListData.results.length > 0) {
+            const randomGameSummary = gameListData.results[Math.floor(Math.random() * gameListData.results.length)];
+            const gameDetails = await rawgFetch(apiKey, apiHost, `/games/${randomGameSummary.id}`);
+            
+            // Verifica se os detalhes do jogo são válidos antes de retornar
+            if (gameDetails && gameDetails.description_raw) {
+                console.log(`Jogo válido encontrado: ${gameDetails.name}`);
+                return gameDetails; // Retorna o jogo se for válido
+            }
+        }
+        console.log("A página sorteada não continha um jogo válido, a tentar novamente...");
     }
     
-    // 3. Escolhe um jogo aleatório da página e busca os seus detalhes completos
-    const randomGameSummary = gameListData.results[Math.floor(Math.random() * gameListData.results.length)];
-    const gameDetails = await rawgFetch(apiKey, apiHost, `/games/${randomGameSummary.id}`);
-
-    return gameDetails;
+    console.log("Não foi possível encontrar um jogo válido após várias tentativas.");
+    return null; // Retorna nulo se todas as tentativas falharem
 }
+
 
 export default async function handler(request, response) {
     const apiKey = process.env.RAPIDAPI_KEY;
@@ -121,3 +130,4 @@ export default async function handler(request, response) {
         return response.status(500).json({ message: error.message || 'Erro interno do servidor.' });
     }
 }
+
