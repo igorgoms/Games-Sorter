@@ -15,18 +15,10 @@ const CURATED_FILTERS = {
     ],
     concepts: [
         { id: 1401, name: 'Stealth' }, { id: 2501, name: 'Eroge' },
-        { id: 869, name: 'Open World' }, { id: 2843, name: 'Roguelike' },
+        { id: 869, name: 'Open World' }, { id: 2843, name: 'Rogelike' },
         { id: 3045, name: 'Metroidvania' }
     ]
 };
-
-// IDs das plataformas principais que serão exibidas separadamente
-const MAIN_PLATFORM_IDS = [
-    '22', '19', '35', '146', '179', // PlayStation 1-5
-    '32', '20', '145', '180',       // Xbox, 360, One, Series S|X
-    '157',                          // Nintendo Switch
-    '94'                            // PC
-];
 
 // Função auxiliar para fazer chamadas à API
 async function giantBombFetch(apiKey, endpoint, params = {}) {
@@ -40,7 +32,6 @@ async function giantBombFetch(apiKey, endpoint, params = {}) {
 
     if (!response.ok) {
         const errorText = await response.text();
-        // Log detalhado da falha na chamada à API externa
         console.error(`Falha na chamada à API Giant Bomb para o endpoint ${endpoint}. Status: ${response.status}. Resposta: ${errorText}`);
         try {
             const errorJson = JSON.parse(errorText);
@@ -52,42 +43,19 @@ async function giantBombFetch(apiKey, endpoint, params = {}) {
     return response.json();
 }
 
-// Função para buscar e organizar todos os filtros
-async function getCuratedFilters(apiKey) {
-    const platformData = await giantBombFetch(apiKey, '/platforms', { field_list: 'id,name,release_date', limit: '200' });
-
-    const mainPlatforms = [];
-    const otherPlatforms = [];
-
-    platformData.results.forEach(p => {
-        if (MAIN_PLATFORM_IDS.includes(p.id.toString())) {
-            mainPlatforms.push(p);
-        } else if (p.release_date) {
-            otherPlatforms.push(p);
-        }
-    });
-    
-    const otherPlatformsByYear = otherPlatforms.reduce((acc, platform) => {
-        const year = new Date(platform.release_date).getFullYear();
-        if (!acc[year]) { acc[year] = []; }
-        acc[year].push(platform);
-        return acc;
-    }, {});
-
+// Função para buscar os géneros (não precisa mais de buscar plataformas)
+async function getCuratedFilters() {
     return {
         genres: CURATED_FILTERS.genres,
         concepts: CURATED_FILTERS.concepts,
-        mainPlatforms,
-        otherPlatformsByYear,
     };
 }
 
-// Função para buscar o jogo sorteado
-async function getSortedGame(apiKey, genres, concepts, platforms) {
+// Função para buscar o jogo sorteado (não precisa mais do filtro de plataformas)
+async function getSortedGame(apiKey, genres, concepts) {
     const filters = [];
     if (genres) filters.push(`genres:${genres}`);
     if (concepts) filters.push(`concepts:${concepts}`);
-    if (platforms) filters.push(`platforms:${platforms}`);
     
     const searchParams = {
         filter: filters.join(','),
@@ -127,13 +95,12 @@ export default async function handler(request, response) {
         let data;
         switch (resource) {
             case 'filters':
-                data = await getCuratedFilters(apiKey);
+                data = await getCuratedFilters();
                 break;
             case 'game':
                 const genres = searchParams.get('genres') || '';
                 const concepts = searchParams.get('concepts') || '';
-                const platforms = searchParams.get('platforms') || '';
-                data = await getSortedGame(apiKey, genres, concepts, platforms);
+                data = await getSortedGame(apiKey, genres, concepts);
                 break;
             default:
                 console.warn(`Recebido pedido para recurso inválido: ${resource}`);
