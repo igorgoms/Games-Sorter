@@ -14,7 +14,7 @@ const CURATED_FILTERS = {
         { id: 9, name: 'Fighting' }
     ],
     concepts: [
-        { id: 1401, name: 'Stealth' }, { id: 2501, name: 'Eroge' },
+        { id: 1401, name: 'Stealth' }, { id: 2501, name: 'Erotic' },
         { id: 869, name: 'Open World' }, { id: 2843, name: 'Rogelike' },
         { id: 3045, name: 'Metroidvania' }
     ]
@@ -96,11 +96,15 @@ export default async function handler(request, response) {
         switch (resource) {
             case 'filters':
                 data = await getCuratedFilters();
+                // MUDANÇA: Cache aplicado apenas aos filtros
+                response.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
                 break;
             case 'game':
                 const genres = searchParams.get('genres') || '';
                 const concepts = searchParams.get('concepts') || '';
                 data = await getSortedGame(apiKey, genres, concepts);
+                // MUDANÇA: Garante que o resultado do jogo NUNCA seja guardado em cache
+                response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
                 break;
             default:
                 console.warn(`Recebido pedido para recurso inválido: ${resource}`);
@@ -113,7 +117,6 @@ export default async function handler(request, response) {
         }
         
         console.log(`Pedido para o recurso '${resource}' bem-sucedido.`);
-        response.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
         return response.status(200).json(data);
 
     } catch (error) {
@@ -123,4 +126,3 @@ export default async function handler(request, response) {
         return response.status(500).json({ message: error.message || 'Erro interno do servidor.' });
     }
 }
-
