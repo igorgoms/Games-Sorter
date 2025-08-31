@@ -108,8 +108,8 @@
         }
 
         function displayGame(game) {
-            const releaseDate = game.original_release_date ? new Date(game.original_release_date).toLocaleDateString('pt-BR') : 'Desconhecido';
-            const description = game.deck || 'Descrição não disponível.';
+            const releaseDate = game.original_release_date ? new Date(game.original_release_date).toLocaleDateString('pt-BR') : 'Unknown';
+            const description = game.deck || 'Description not available';
             const genres = game.genres && game.genres.length > 0 ? game.genres.map(g => g.name).join(', ') : 'Não classificado';
 
             gameResultContainer.innerHTML = `
@@ -118,8 +118,8 @@
                 </div>
                 <div class="w-full md:w-2/3">
                     <h3 class="text-lg md:text-xl font-bold text-yellow-300">${game.name}</h3>
-                    <p class="text-xs mt-2 mb-2 text-gray-400">Lançamento: ${releaseDate}</p>
-                    <p class="text-xs mt-1 mb-4 text-gray-400">Géneros: ${genres}</p>
+                    <p class="text-xs mt-2 mb-2 text-gray-400">Release date: ${releaseDate}</p>
+                    <p class="text-xs mt-1 mb-4 text-gray-400">Genres: ${genres}</p>
                     <div class="description-box text-sm">
                         <p>${description}</p>
                     </div>
