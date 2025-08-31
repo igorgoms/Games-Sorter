@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Sorter</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #0d0221;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: #f0f0f0;
+            animation: moveBackground 4s linear infinite;
+        }
+        @keyframes moveBackground {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 40px; }
+        }
+        .container-90s {
+            border: 4px solid #00e5ff;
+            box-shadow: 0 0 15px #ff00c1, 0 0 20px #ff00c1 inset;
+            background-color: #26174a;
+        }
+        .btn-90s {
+            border: 2px solid #f0f0f0;
+            background-color: #4b2a8f;
+            color: #f0f0f0;
+            box-shadow: 4px 4px 0px #0d0221;
+            transition: all 0.1s ease-in-out;
+            image-rendering: pixelated;
+            cursor: pointer;
+        }
+        .btn-90s:hover:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #0d0221;
+        }
+        .btn-90s.selected {
+            background-color: #ff00c1;
+            color: #fff;
+            border-color: #00e5ff;
+            box-shadow: 4px 4px 0px #00e5ff;
+        }
+        .btn-90s:disabled {
+            background-color: #333;
+            color: #777;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+        #sort-button {
+            background-color: #00ff85;
+            color: #0d0221;
+            font-weight: bold;
+            border-color: #f0f0f0;
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 4px 4px 0px #0d0221, 0 0 10px #00ff85;
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 4px 4px 0px #0d0221, 0 0 25px #00ff85, 0 0 40px #00ff85;
+                transform: scale(1.05);
+            }
+        }
+        .glitch-text {
+            color: #00e5ff;
+            text-shadow: -1px -1px 0 #ff00c1, 1px 1px 0 #00ff85;
+        }
+        .section-title {
+            color: #f0f0f0;
+            text-shadow: 2px 2px 0px #ff00c1;
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <main class="w-full flex-grow flex items-center justify-center">
+        <!-- Tela de Seleção -->
+        <div id="selection-screen" class="container-90s w-full max-w-3xl p-6 md:p-8 rounded-lg">
+            <h1 class="text-2xl md:text-3xl text-center mb-6 glitch-text">GAME SORTER</h1>
+            <div id="status-message" class="text-center text-yellow-300 mb-4">A carregar dados...</div>
+            
+            <h2 class="text-lg section-title">GÉNEROS</h2>
+            <div id="genre-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+
+            <h2 class="text-lg section-title">PLATAFORMAS</h2>
+            <div id="platform-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8"></div>
+            
+            <button id="sort-button" class="btn-90s w-full py-3 text-lg" disabled>A CARREGAR...</button>
+        </div>
+
+        <!-- Tela de Resultado -->
+        <div id="result-screen" class="hidden container-90s w-full max-w-3xl p-6 md:p-8 rounded-lg">
+            <h2 class="text-2xl text-center mb-6 glitch-text">SUGESTÃO DE JOGO</h2>
+            <div id="game-result"></div>
+            <div id="no-result" class="hidden text-center py-8">
+                <p class="text-lg text-yellow-300">Não encontrámos um jogo com essa combinação.</p>
+                <p class="mt-2 text-sm">Tente novamente ou com outros filtros.</p>
+            </div>
+            <button id="back-button" class="btn-90s w-full py-3 mt-8">VOLTAR</button>
+        </div>
+    </main>
+    
+    <footer class="w-full">
+        <p class="text-xs text-center text-gray-500 py-4">
+            Criado por Igor Lucena Gomes | Todos os direitos reservados - 2025 ©
+        </p>
+    </footer>
+
+    <script>
+        const statusMessage = document.getElementById('status-message');
+        const selectionScreen = document.getElementById('selection-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const sortButton = document.getElementById('sort-button');
+        const backButton = document.getElementById('back-button');
+        const genreGrid = document.getElementById('genre-grid');
+        const platformGrid = document.getElementById('platform-grid');
+        const gameResultContainer = document.getElementById('game-result');
+        const noResultContainer = document.getElementById('no-result');
+
+        let selectedGenreIds = [];
+        let selectedPlatformIds = [];
+
+        async function apiFetch(params = {}) {
+            const query = new URLSearchParams(params);
+            const response = await fetch(`/api/giantbomb?${query.toString()}`);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Falha na chamada da API');
+            }
+            return response.json();
+        }
+
+        function createFilterButtons(container, items, stateArray) {
+            container.innerHTML = '';
+            items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
+                const button = document.createElement('button');
+                button.innerText = item.name;
+                button.classList.add('btn-90s', 'p-2', 'text-xs', 'md:text-sm', 'truncate');
+                button.dataset.id = item.id;
+                button.addEventListener('click', () => {
+                    button.classList.toggle('selected');
+                    const id = button.dataset.id;
+                    if (stateArray.includes(id)) {
+                        const index = stateArray.indexOf(id);
+                        stateArray.splice(index, 1);
+                    } else {
+                        stateArray.push(id);
+                    }
+                });
+                container.appendChild(button);
+            });
+        }
+
+        async function initializeApp() {
+            try {
+                const [genres, platforms] = await Promise.all([
+                    apiFetch({ resource: 'genres' }),
+                    apiFetch({ resource: 'platforms' })
+                ]);
+                
+                createFilterButtons(genreGrid, genres.results, selectedGenreIds);
+                createFilterButtons(platformGrid, platforms.results, selectedPlatformIds);
+
+                statusMessage.textContent = 'Escolha os filtros e clique em SORT';
+                sortButton.disabled = false;
+                sortButton.innerText = 'SORT';
+            } catch (error) {
+                console.error('Falha ao inicializar:', error);
+                statusMessage.innerHTML = 'Não foi possível carregar os dados.<br>Tente recarregar a página.';
+                sortButton.innerText = 'ERRO';
+            }
+        }
+
+        function displayGame(game) {
+            const platforms = game.platforms ? game.platforms.map(p => p.name).join(' / ') : 'N/A';
+            const releaseDate = game.original_release_date ? game.original_release_date.split(' ')[0] : 'N/A';
+            const description = game.deck || 'Descrição não disponível.';
+
+            gameResultContainer.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-6 items-center md:items-start text-center md:text-left">
+                    <div class="w-full md:w-1/3 flex-shrink-0">
+                        <img src="${game.image.medium_url}" alt="Capa de ${game.name}" class="w-full max-w-xs mx-auto md:max-w-none rounded-md border-2 border-[#f0f0f0] shadow-lg">
+                    </div>
+                    <div class="w-full md:w-2/3">
+                        <h3 class="text-xl md:text-2xl font-bold text-yellow-300">${game.name}</h3>
+                        <p class="text-xs mt-2 mb-4 text-gray-400">Lançamento: ${releaseDate}</p>
+                        <p class="text-sm md:text-base mb-4">${description}</p>
+                        
+                        <div class="mt-4 pt-4 border-t-2 border-dashed border-pink-500">
+                             <h4 class="text-sm font-bold text-gray-300 mb-2">Plataformas:</h4>
+                             <p class="text-xs text-gray-400 mb-4">${platforms}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            gameResultContainer.classList.remove('hidden');
+            noResultContainer.classList.add('hidden');
+            selectionScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+        }
+
+        function displayNoResult() {
+            gameResultContainer.classList.add('hidden');
+            noResultContainer.classList.remove('hidden');
+            selectionScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+        }
+
+        sortButton.addEventListener('click', async () => {
+             if (selectedGenreIds.length === 0 && selectedPlatformIds.length === 0) {
+                statusMessage.textContent = 'Por favor, selecione pelo menos um filtro!';
+                return;
+            }
+            sortButton.disabled = true;
+            sortButton.innerText = 'A PROCURAR...';
+            try {
+                const game = await apiFetch({
+                    resource: 'game',
+                    genres: selectedGenreIds.join(','),
+                    platforms: selectedPlatformIds.join(',')
+                });
+                if(game && game.name) {
+                    displayGame(game);
+                } else {
+                    displayNoResult();
+                }
+            } catch (error) {
+                console.error("Erro ao sortear jogo:", error);
+                displayNoResult();
+            } finally {
+                sortButton.disabled = false;
+                sortButton.innerText = 'SORT';
+            }
+        });
+        
+        backButton.addEventListener('click', () => {
+            selectionScreen.classList.remove('hidden');
+            resultScreen.classList.add('hidden');
+        });
+
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
