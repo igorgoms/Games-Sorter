@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Random Game Sorter</title>
+    <title>Random Game Picker</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎲</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,25 +67,25 @@
     <main id="app-container" class="w-full flex-grow flex items-center justify-center">
         <!-- Tela de Seleção -->
         <div id="selection-screen" class="container-90s w-full max-w-2xl p-8 md:p-12 rounded-lg text-center">
-            <h1 class="text-3xl md:text-4xl text-center mb-8 glitch-text">RANDOM GAME SORTER</h1>
-            <button id="sort-button" class="btn-90s w-full py-4 px-6 text-lg md:text-xl">What will I play today?</button>
+            <h1 class="text-3xl md:text-4xl text-center mb-8 glitch-text">Random Game Picker</h1>
+            <button id="sort-button" class="btn-90s w-full py-4 px-6 text-lg md:text-xl">What should I play today?</button>
             <div id="status-message" class="text-center text-yellow-300 mt-6 min-h-[20px]"></div>
         </div>
 
         <!-- Tela de Resultado -->
         <div id="result-screen" class="hidden container-90s w-full max-w-4xl p-6 md:p-8 rounded-lg">
-            <h2 class="text-xl md:text-2xl text-center mb-6 glitch-text">MY SUGGESTION IS...</h2>
+            <h2 class="text-xl md:text-2xl text-center mb-6 glitch-text">MY PICK IS...</h2>
             <div id="game-result" class="flex flex-col md:flex-row gap-6 items-start"></div>
             <div id="no-result" class="hidden text-center py-8">
-                <p class="text-lg text-yellow-300">An Error Has Occurred!</p>
-                <p id="error-message" class="mt-2 text-sm">Unable to draw a game. Please try again.</p>
+                <p class="text-lg text-yellow-300">An error occurred!</p>
+                <p id="error-message" class="mt-2 text-sm">Couldn't pick a game. Please try again.</p>
             </div>
-            <button id="back-button" class="btn-90s w-full py-3 mt-8">TRY AGAIN</button>
+            <button id="back-button" class="btn-90s w-full py-3 mt-8">Try Another Game</button>
         </div>
     </main>
 
     <footer class="w-full text-center text-xs text-gray-400 p-4 mt-auto">
-        Created by Igor Lucena Gomes | All rights reserved - 2025 ©
+        Created by Igor Lucena Gomes | © 2025 All rights reserved
     </footer>
 
     <script>
@@ -143,7 +143,7 @@
         }
         
         sortButton.addEventListener('click', async () => {
-            statusMessage.textContent = 'Drawing a game from the universe...';
+            statusMessage.textContent = 'Picking a game for you...';
             sortButton.disabled = true;
 
             try {
