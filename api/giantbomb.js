@@ -3,7 +3,7 @@
 
 const GB_API_URL = 'https://www.giantbomb.com/api';
 
-// Lista de géneros e conceitos curados para o projeto
+// MUDANÇA: A lista de géneros e conceitos volta a ser curada manualmente.
 const CURATED_FILTERS = {
     genres: [
         { id: 27, name: 'Survival horror' }, { id: 42, name: "Beat 'em up" },
@@ -43,15 +43,12 @@ async function giantBombFetch(apiKey, endpoint, params = {}) {
     return response.json();
 }
 
-// Função para buscar os géneros (não precisa mais de buscar plataformas)
-async function getCuratedFilters() {
-    return {
-        genres: CURATED_FILTERS.genres,
-        concepts: CURATED_FILTERS.concepts,
-    };
+// MUDANÇA: A função agora retorna a lista curada, sem chamar a API.
+async function getFilters() {
+    return CURATED_FILTERS;
 }
 
-// Função para buscar o jogo sorteado (não precisa mais do filtro de plataformas)
+// Função para buscar o jogo sorteado
 async function getSortedGame(apiKey, genres, concepts) {
     const filters = [];
     if (genres) filters.push(`genres:${genres}`);
@@ -95,15 +92,13 @@ export default async function handler(request, response) {
         let data;
         switch (resource) {
             case 'filters':
-                data = await getCuratedFilters();
-                // MUDANÇA: Cache aplicado apenas aos filtros
+                data = await getFilters(); // MUDANÇA: Chama a função simplificada
                 response.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
                 break;
             case 'game':
                 const genres = searchParams.get('genres') || '';
                 const concepts = searchParams.get('concepts') || '';
                 data = await getSortedGame(apiKey, genres, concepts);
-                // MUDANÇA: Garante que o resultado do jogo NUNCA seja guardado em cache
                 response.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
                 break;
             default:
@@ -126,3 +121,4 @@ export default async function handler(request, response) {
         return response.status(500).json({ message: error.message || 'Erro interno do servidor.' });
     }
 }
+
