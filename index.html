@@ -110,7 +110,7 @@
         function displayGame(game) {
             const releaseDate = game.original_release_date ? new Date(game.original_release_date).toLocaleDateString('pt-BR') : 'Unknown';
             const description = game.deck || 'Description not available';
-            const genres = game.genres && game.genres.length > 0 ? game.genres.map(g => g.name).join(', ') : 'Não classificado';
+            const genres = game.genres && game.genres.length > 0 ? game.genres.map(g => g.name).join(', ') : 'Uncategorized';
 
             gameResultContainer.innerHTML = `
                 <div class="w-full md:w-1/3 flex-shrink-0">
