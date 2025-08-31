@@ -82,6 +82,13 @@
             margin-bottom: 0.75rem;
             margin-top: 1.5rem;
         }
+        details > summary {
+            cursor: pointer;
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
@@ -91,12 +98,15 @@
         <div id="selection-screen" class="container-90s w-full max-w-3xl p-6 md:p-8 rounded-lg">
             <h1 class="text-2xl md:text-3xl text-center mb-6 glitch-text">GAME SORTER</h1>
             <div id="status-message" class="text-center text-yellow-300 mb-4">A carregar dados...</div>
+
+            <h2 class="text-lg section-title">PRINCIPAIS PLATAFORMAS</h2>
+            <div id="main-platform-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
             
-            <h2 class="text-lg section-title">GÉNEROS</h2>
+            <h2 class="text-lg section-title">GÉNEROS & ESTILOS</h2>
             <div id="genre-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
 
-            <h2 class="text-lg section-title">PLATAFORMAS</h2>
-            <div id="platform-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8"></div>
+            <h2 class="text-lg section-title">OUTRAS PLATAFORMAS (POR ANO)</h2>
+            <div id="other-platforms-accordion" class="space-y-2 mb-8"></div>
             
             <button id="sort-button" class="btn-90s w-full py-3 text-lg" disabled>A CARREGAR...</button>
         </div>
@@ -126,11 +136,13 @@
         const sortButton = document.getElementById('sort-button');
         const backButton = document.getElementById('back-button');
         const genreGrid = document.getElementById('genre-grid');
-        const platformGrid = document.getElementById('platform-grid');
+        const mainPlatformGrid = document.getElementById('main-platform-grid');
+        const otherPlatformsAccordion = document.getElementById('other-platforms-accordion');
         const gameResultContainer = document.getElementById('game-result');
         const noResultContainer = document.getElementById('no-result');
 
         let selectedGenreIds = [];
+        let selectedConceptIds = [];
         let selectedPlatformIds = [];
 
         async function apiFetch(params = {}) {
@@ -142,37 +154,67 @@
             }
             return response.json();
         }
-
-        function createFilterButtons(container, items, stateArray) {
+        
+        function createFilterButtons(container, items, stateArray, itemType) {
             container.innerHTML = '';
             items.sort((a, b) => a.name.localeCompare(b.name)).forEach(item => {
                 const button = document.createElement('button');
                 button.innerText = item.name;
                 button.classList.add('btn-90s', 'p-2', 'text-xs', 'md:text-sm', 'truncate');
                 button.dataset.id = item.id;
+                button.dataset.type = itemType;
                 button.addEventListener('click', () => {
                     button.classList.toggle('selected');
                     const id = button.dataset.id;
-                    if (stateArray.includes(id)) {
-                        const index = stateArray.indexOf(id);
-                        stateArray.splice(index, 1);
+                    const type = button.dataset.type;
+                    let targetArray;
+
+                    if (type === 'genre') targetArray = selectedGenreIds;
+                    else if (type === 'concept') targetArray = selectedConceptIds;
+                    else targetArray = selectedPlatformIds;
+
+                    if (targetArray.includes(id)) {
+                        const index = targetArray.indexOf(id);
+                        targetArray.splice(index, 1);
                     } else {
-                        stateArray.push(id);
+                        targetArray.push(id);
                     }
                 });
                 container.appendChild(button);
             });
         }
+        
+        function createAccordion(container, years, stateArray) {
+            container.innerHTML = '';
+            const sortedYears = Object.keys(years).sort((a, b) => b - a);
+
+            sortedYears.forEach(year => {
+                const details = document.createElement('details');
+                const summary = document.createElement('summary');
+                summary.classList.add('btn-90s', 'w-full', 'p-2', 'text-left');
+                summary.textContent = `Ano: ${year}`;
+                
+                const content = document.createElement('div');
+                content.classList.add('p-4', 'border-2', 'border-t-0', 'border-pink-500', 'grid', 'grid-cols-2', 'sm:grid-cols-3', 'gap-2');
+                createFilterButtons(content, years[year], stateArray, 'platform');
+                
+                details.appendChild(summary);
+                details.appendChild(content);
+                container.appendChild(details);
+            });
+        }
 
         async function initializeApp() {
             try {
-                const [genres, platforms] = await Promise.all([
-                    apiFetch({ resource: 'genres' }),
-                    apiFetch({ resource: 'platforms' })
-                ]);
+                const filters = await apiFetch({ resource: 'filters' });
                 
-                createFilterButtons(genreGrid, genres.results, selectedGenreIds);
-                createFilterButtons(platformGrid, platforms.results, selectedPlatformIds);
+                const allGenres = [...filters.genres, ...filters.concepts];
+                
+                createFilterButtons(genreGrid, filters.genres, selectedGenreIds, 'genre');
+                createFilterButtons(genreGrid, filters.concepts, selectedConceptIds, 'concept');
+                
+                createFilterButtons(mainPlatformGrid, filters.mainPlatforms, selectedPlatformIds, 'platform');
+                createAccordion(otherPlatformsAccordion, filters.otherPlatformsByYear, selectedPlatformIds);
 
                 statusMessage.textContent = 'Escolha os filtros e clique em SORT';
                 sortButton.disabled = false;
@@ -186,7 +228,15 @@
 
         function displayGame(game) {
             const platforms = game.platforms ? game.platforms.map(p => p.name).join(' / ') : 'N/A';
-            const releaseDate = game.original_release_date ? game.original_release_date.split(' ')[0] : 'N/A';
+            
+            let releaseDate = 'N/A';
+            if (game.original_release_date) {
+                const dateParts = game.original_release_date.split(' ')[0].split('-'); // [YYYY, MM, DD]
+                if (dateParts.length === 3) {
+                    releaseDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                }
+            }
+            
             const description = game.deck || 'Descrição não disponível.';
 
             gameResultContainer.innerHTML = `
@@ -198,7 +248,6 @@
                         <h3 class="text-xl md:text-2xl font-bold text-yellow-300">${game.name}</h3>
                         <p class="text-xs mt-2 mb-4 text-gray-400">Lançamento: ${releaseDate}</p>
                         <p class="text-sm md:text-base mb-4">${description}</p>
-                        
                         <div class="mt-4 pt-4 border-t-2 border-dashed border-pink-500">
                              <h4 class="text-sm font-bold text-gray-300 mb-2">Plataformas:</h4>
                              <p class="text-xs text-gray-400 mb-4">${platforms}</p>
@@ -220,7 +269,7 @@
         }
 
         sortButton.addEventListener('click', async () => {
-             if (selectedGenreIds.length === 0 && selectedPlatformIds.length === 0) {
+             if (selectedGenreIds.length === 0 && selectedConceptIds.length === 0 && selectedPlatformIds.length === 0) {
                 statusMessage.textContent = 'Por favor, selecione pelo menos um filtro!';
                 return;
             }
@@ -230,6 +279,7 @@
                 const game = await apiFetch({
                     resource: 'game',
                     genres: selectedGenreIds.join(','),
+                    concepts: selectedConceptIds.join(','),
                     platforms: selectedPlatformIds.join(',')
                 });
                 if(game && game.name) {
@@ -255,3 +305,4 @@
     </script>
 </body>
 </html>
+
