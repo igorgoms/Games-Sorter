@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Sorter</title>
+    <title>Game Sorter - Por Género</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎮</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -82,13 +82,6 @@
             margin-bottom: 0.75rem;
             margin-top: 1.5rem;
         }
-        details > summary {
-            cursor: pointer;
-            list-style: none;
-        }
-        details > summary::-webkit-details-marker {
-            display: none;
-        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
@@ -97,16 +90,10 @@
         <!-- Tela de Seleção -->
         <div id="selection-screen" class="container-90s w-full max-w-3xl p-6 md:p-8 rounded-lg">
             <h1 class="text-2xl md:text-3xl text-center mb-6 glitch-text">GAME SORTER</h1>
-            <div id="status-message" class="text-center text-yellow-300 mb-4">A carregar dados...</div>
-
-            <h2 class="text-lg section-title">PRINCIPAIS PLATAFORMAS</h2>
-            <div id="main-platform-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
+            <div id="status-message" class="text-center text-yellow-300 mb-4">A carregar géneros...</div>
             
             <h2 class="text-lg section-title">GÉNEROS & ESTILOS</h2>
-            <div id="genre-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"></div>
-
-            <h2 class="text-lg section-title">OUTRAS PLATAFORMAS (POR ANO)</h2>
-            <div id="other-platforms-accordion" class="space-y-2 mb-8"></div>
+            <div id="genre-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8"></div>
             
             <button id="sort-button" class="btn-90s w-full py-3 text-lg" disabled>A CARREGAR...</button>
         </div>
@@ -117,7 +104,7 @@
             <div id="game-result"></div>
             <div id="no-result" class="hidden text-center py-8">
                 <p class="text-lg text-yellow-300">Não encontrámos um jogo com essa combinação.</p>
-                <p class="mt-2 text-sm">Tente novamente ou com outros filtros.</p>
+                <p class="mt-2 text-sm">Tente novamente ou com outros géneros.</p>
             </div>
             <button id="back-button" class="btn-90s w-full py-3 mt-8">VOLTAR</button>
         </div>
@@ -136,14 +123,11 @@
         const sortButton = document.getElementById('sort-button');
         const backButton = document.getElementById('back-button');
         const genreGrid = document.getElementById('genre-grid');
-        const mainPlatformGrid = document.getElementById('main-platform-grid');
-        const otherPlatformsAccordion = document.getElementById('other-platforms-accordion');
         const gameResultContainer = document.getElementById('game-result');
         const noResultContainer = document.getElementById('no-result');
 
         let selectedGenreIds = [];
         let selectedConceptIds = [];
-        let selectedPlatformIds = [];
 
         async function apiFetch(params = {}) {
             const query = new URLSearchParams(params);
@@ -167,11 +151,7 @@
                     button.classList.toggle('selected');
                     const id = button.dataset.id;
                     const type = button.dataset.type;
-                    let targetArray;
-
-                    if (type === 'genre') targetArray = selectedGenreIds;
-                    else if (type === 'concept') targetArray = selectedConceptIds;
-                    else targetArray = selectedPlatformIds;
+                    let targetArray = (type === 'genre') ? selectedGenreIds : selectedConceptIds;
 
                     if (targetArray.includes(id)) {
                         const index = targetArray.indexOf(id);
@@ -183,40 +163,19 @@
                 container.appendChild(button);
             });
         }
-        
-        function createAccordion(container, years, stateArray) {
-            container.innerHTML = '';
-            const sortedYears = Object.keys(years).sort((a, b) => b - a);
-
-            sortedYears.forEach(year => {
-                const details = document.createElement('details');
-                const summary = document.createElement('summary');
-                summary.classList.add('btn-90s', 'w-full', 'p-2', 'text-left');
-                summary.textContent = `Ano: ${year}`;
-                
-                const content = document.createElement('div');
-                content.classList.add('p-4', 'border-2', 'border-t-0', 'border-pink-500', 'grid', 'grid-cols-2', 'sm:grid-cols-3', 'gap-2');
-                createFilterButtons(content, years[year], stateArray, 'platform');
-                
-                details.appendChild(summary);
-                details.appendChild(content);
-                container.appendChild(details);
-            });
-        }
 
         async function initializeApp() {
             try {
                 const filters = await apiFetch({ resource: 'filters' });
                 
-                const allGenres = [...filters.genres, ...filters.concepts];
-                
-                createFilterButtons(genreGrid, filters.genres, selectedGenreIds, 'genre');
-                createFilterButtons(genreGrid, filters.concepts, selectedConceptIds, 'concept');
-                
-                createFilterButtons(mainPlatformGrid, filters.mainPlatforms, selectedPlatformIds, 'platform');
-                createAccordion(otherPlatformsAccordion, filters.otherPlatformsByYear, selectedPlatformIds);
+                createFilterButtons(genreGrid, [...filters.genres, ...filters.concepts], null, null);
+                // Ajuste para lidar com os dois tipos de arrays
+                genreGrid.querySelectorAll('button').forEach(button => {
+                    const isConcept = filters.concepts.some(c => c.id == button.dataset.id);
+                    button.dataset.type = isConcept ? 'concept' : 'genre';
+                });
 
-                statusMessage.textContent = 'Escolha os filtros e clique em SORT';
+                statusMessage.textContent = 'Escolha os géneros e clique em SORT';
                 sortButton.disabled = false;
                 sortButton.innerText = 'SORT';
             } catch (error) {
@@ -231,7 +190,7 @@
             
             let releaseDate = 'N/A';
             if (game.original_release_date) {
-                const dateParts = game.original_release_date.split(' ')[0].split('-'); // [YYYY, MM, DD]
+                const dateParts = game.original_release_date.split(' ')[0].split('-');
                 if (dateParts.length === 3) {
                     releaseDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
                 }
@@ -248,7 +207,7 @@
                         <h3 class="text-xl md:text-2xl font-bold text-yellow-300">${game.name}</h3>
                         <p class="text-xs mt-2 mb-4 text-gray-400">Lançamento: ${releaseDate}</p>
                         <p class="text-sm md:text-base mb-4">${description}</p>
-                        <div class="mt-4 pt-4 border-t-2 border-dashed border-pink-500">
+                         <div class="mt-4 pt-4 border-t-2 border-dashed border-pink-500">
                              <h4 class="text-sm font-bold text-gray-300 mb-2">Plataformas:</h4>
                              <p class="text-xs text-gray-400 mb-4">${platforms}</p>
                         </div>
@@ -269,8 +228,8 @@
         }
 
         sortButton.addEventListener('click', async () => {
-             if (selectedGenreIds.length === 0 && selectedConceptIds.length === 0 && selectedPlatformIds.length === 0) {
-                statusMessage.textContent = 'Por favor, selecione pelo menos um filtro!';
+             if (selectedGenreIds.length === 0 && selectedConceptIds.length === 0) {
+                statusMessage.textContent = 'Por favor, selecione pelo menos um género!';
                 return;
             }
             sortButton.disabled = true;
@@ -279,8 +238,7 @@
                 const game = await apiFetch({
                     resource: 'game',
                     genres: selectedGenreIds.join(','),
-                    concepts: selectedConceptIds.join(','),
-                    platforms: selectedPlatformIds.join(',')
+                    concepts: selectedConceptIds.join(',')
                 });
                 if(game && game.name) {
                     displayGame(game);
